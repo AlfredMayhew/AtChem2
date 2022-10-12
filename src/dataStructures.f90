@@ -349,6 +349,7 @@ module species_mod
   public :: getNumberOfSpecies, setNumberOfSpecies
   public :: getNumberOfReactions, setNumberOfReactions
   public :: getNumberOfGenericComplex, setNumberOfGenericComplex
+  public :: getIndexOfSpecies
   public :: deallocateSpeciesList, getSpeciesList, setSpeciesList
 
   integer(kind=NPI) :: numSpecies, numReactions, numGenericComplex
@@ -388,6 +389,18 @@ contains
     integer(kind=NPI) :: n
     numGenericComplex = n
   end subroutine setNumberOfGenericComplex
+  
+  pure function getIndexOfSpecies( specName ) result ( n )
+    character(len=*), intent(in) :: specName
+    integer(kind=NPI) :: n, i
+    
+    do i = 1, numSpecies
+        if (speciesList(i) == specName) then
+            n = i
+            exit
+        endif
+    end do
+  end function getIndexOfSpecies
 
   subroutine deallocateSpeciesList
     deallocate (speciesList)

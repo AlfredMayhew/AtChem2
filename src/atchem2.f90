@@ -428,7 +428,7 @@ PROGRAM ATCHEM2
     call calcCurrentDateParameters( t )
 
     call outputPhotoRateCalcParameters( t )
-
+    
     ! Output Jacobian matrix (output frequency set in
     ! model.parameters)
     if ( outputJacobian .eqv. .true. ) then

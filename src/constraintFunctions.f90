@@ -123,12 +123,25 @@ contains
   ! in vector x.
   subroutine addConstrainedSpeciesToProbSpec( z, constrainedConcentrations, constrainedSpecs, x )
     use types_mod
+    use env_vars_mod, only : currentEnvVarValues
+    use species_mod, only : getIndexOfSpecies
 
     real(kind=DP), intent(in) :: z(*), constrainedConcentrations(:)
     integer(kind=NPI), intent(in) :: constrainedSpecs(:)
     real(kind=DP), intent(out) :: x(:)
     integer(kind=NPI) :: zCounter, i, j, speciesConstrained
-
+    
+    real(kind=DP) :: currentNoxConc, noxDiff, noRatio, no2Ratio
+    integer(kind=NPI) :: noIdx, no2Idx
+    
+    noIdx = getIndexOfSpecies("NO")
+    no2Idx = getIndexOfSpecies("NO2")
+    
+    currentNoxConc = (z(noIdx) + z(no2Idx))
+    noxDiff = currentEnvVarValues(12)/currentNoxConc 
+    noRatio = (z(noIdx)/currentNoxConc) 
+    no2Ratio = (z(no2Idx)/currentNoxConc) 
+    
     ! This fills x with the contents of z, plus the contents of
     ! constrainedConcentrations, using constrainedSpecs as the key to
     ! which species are constrained.
@@ -147,7 +160,13 @@ contains
       if ( speciesConstrained > 0 ) then
         x(i) = constrainedConcentrations(speciesConstrained)
       else if ( speciesConstrained == 0 ) then
-        x(i) = z(zCounter)
+        if (i == noIdx) then
+          x(i) = currentNoxConc*noRatio*noxDiff
+        else if (i == no2Idx) then
+          x(i) = currentNoxConc*no2Ratio*noxDiff     
+        else
+          x(i) = z(zCounter)
+        end if
         zCounter = zCounter + 1
       else
         stop 'Error adding constrained values to measured values'
@@ -226,8 +245,8 @@ contains
     ! element 12 in the orderedEnvVarNames initialisation below.  Its
     ! treatment needs defining in each of cases 1-3 and default below.
 
-    if ( size( envVarNames ) /= 11 ) then
-      write(stderr,*) 'size( envVarNames ) /= 11 in getEnvVarsAtT().'
+    if ( size( envVarNames ) /= 12 ) then
+      write(stderr,*) 'size( envVarNames ) /= 12 in getEnvVarsAtT().'
     end if
     orderedEnvVarNames(1) = 'PRESS'
     orderedEnvVarNames(2) = 'TEMP'
@@ -240,7 +259,8 @@ contains
     orderedEnvVarNames(9) = 'DILUTE'
     orderedEnvVarNames(10) = 'ROOF'
     orderedEnvVarNames(11) = 'ASA'
-
+    orderedEnvVarNames(12) = 'NOx'
+    
     pressure_set = .false.
     rh_set = .false.
     temp_set = .false.
@@ -255,7 +275,7 @@ contains
       select case ( envVarTypesNum(envVarNum) )
         case ( 1 ) ! CALC
           select case ( this_env_var_name )
-            case ( 'PRESS', 'TEMP', 'RH', 'BLHEIGHT', 'DILUTE', 'ROOF', 'ASA' )
+            case ( 'PRESS', 'TEMP', 'RH', 'BLHEIGHT', 'DILUTE', 'ROOF', 'ASA', 'NOx' )
               write (stderr,*) 'getEnvVarsAtT(): No calculation available for ' // trim( this_env_var_name )
               stop
             case ( 'M' )
@@ -311,7 +331,7 @@ contains
               temp_set = .true.
             case ( 'H2O' )
               this_env_val = 3.91e+17_DP
-            case ( 'RH', 'BLHEIGHT', 'DILUTE', 'ASA' )
+            case ( 'RH', 'BLHEIGHT', 'DILUTE', 'ASA', 'NOx' )
               this_env_val = -1.0_DP
             case ( 'DEC' )
               this_env_val = 0.41_DP
@@ -331,7 +351,7 @@ contains
 
       ! Copy this_env_var_name to the correct output variable
       select case ( this_env_var_name )
-        case ( 'PRESS', 'TEMP', 'M', 'RH', 'H2O', 'BLHEIGHT', 'JFAC', 'DILUTE', 'ROOF', 'ASA' )
+        case ( 'PRESS', 'TEMP', 'M', 'RH', 'H2O', 'BLHEIGHT', 'JFAC', 'DILUTE', 'ROOF', 'ASA', 'NOx' )
         case ( 'DEC' )
           call calcZenith( t, this_env_val )
         case default
