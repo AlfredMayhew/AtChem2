@@ -121,7 +121,7 @@ contains
   ! Take in z, the vector of concentrations of unconstrained species,
   ! and add the concentrations of the constrained species. Return this
   ! in vector x.
-  subroutine addConstrainedSpeciesToProbSpec( z, constrainedConcentrations, constrainedSpecs, x )
+  subroutine addConstrainedSpeciesToProbSpec( z, constrainedConcentrations, constrainedSpecs, noxScale, x )
     use types_mod
     use env_vars_mod, only : currentEnvVarValues
     use species_mod, only : getIndexOfSpecies
@@ -129,6 +129,7 @@ contains
     real(kind=DP), intent(in) :: z(*), constrainedConcentrations(:)
     integer(kind=NPI), intent(in) :: constrainedSpecs(:)
     real(kind=DP), intent(out) :: x(:)
+    logical, intent(in) :: noxScale
     integer(kind=NPI) :: zCounter, i, j, speciesConstrained
     
     real(kind=DP) :: currentNoxConc, noxDiff, noRatio, no2Ratio
@@ -160,9 +161,9 @@ contains
       if ( speciesConstrained > 0 ) then
         x(i) = constrainedConcentrations(speciesConstrained)
       else if ( speciesConstrained == 0 ) then
-        if (i == noIdx) then
+        if ((i == noIdx) .and. (noxScale)) then
           x(i) = currentNoxConc*noRatio*noxDiff
-        else if (i == no2Idx) then
+        else if ((i == no2Idx) .and. (noxScale))  then
           x(i) = currentNoxConc*no2Ratio*noxDiff     
         else
           x(i) = z(zCounter)
