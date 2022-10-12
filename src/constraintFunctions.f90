@@ -139,7 +139,7 @@ contains
     no2Idx = getIndexOfSpecies("NO2")
     
     currentNoxConc = (z(noIdx) + z(no2Idx))
-    noxDiff = currentEnvVarValues(12)/currentNoxConc 
+    noxDiff = currentEnvVarValues(12)-currentNoxConc 
     noRatio = (z(noIdx)/currentNoxConc) 
     no2Ratio = (z(no2Idx)/currentNoxConc) 
     
@@ -162,9 +162,9 @@ contains
         x(i) = constrainedConcentrations(speciesConstrained)
       else if ( speciesConstrained == 0 ) then
         if ((i == noIdx) .and. (noxScale)) then
-          x(i) = currentNoxConc*noRatio*noxDiff
+          x(i) = z(i) + (noxDiff*noRatio)
         else if ((i == no2Idx) .and. (noxScale))  then
-          x(i) = currentNoxConc*no2Ratio*noxDiff     
+          x(i) = z(i) + (noxDiff*no2Ratio)    
         else
           x(i) = z(zCounter)
         end if
