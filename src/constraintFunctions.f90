@@ -162,13 +162,11 @@ contains
     use species_mod, only : getIndexOfSpecies
     
     real(kind=DP) :: currentNoxConc, noxDiff, noRatio, no2Ratio
-    integer(kind=NPI) :: noIdx, no2Idx
+    integer(kind=NPI) :: noIdx, no2Idx, i
     
-    real(kind=DP), intent(in) :: inArr(:)
-    real(kind=DP), intent(out) :: outArr(size(inArr))
-    
-    outArr = inArr
-    
+    real(kind=DP), intent(in) :: inArr(*)
+    real(kind=DP), intent(out) :: outArr(:)
+      
     noIdx = getIndexOfSpecies("NO")
     no2Idx = getIndexOfSpecies("NO2")
     
@@ -176,12 +174,20 @@ contains
     noxDiff = currentEnvVarValues(12)-currentNoxConc 
     noRatio = (inArr(noIdx)/currentNoxConc) 
     no2Ratio = (inArr(no2Idx)/currentNoxConc) 
-
-    outArr(noIdx) = inArr(noIdx) + (noxDiff*noRatio)
-    outArr(no2Idx) = inArr(no2Idx) + (noxDiff*no2Ratio)  
+    
+    do i = 1, size( outArr )
+      if (i == noIdx) then
+        outArr(noIdx) = inArr(noIdx) + (noxDiff*noRatio)
+      else if (i == no2Idx) then
+        outArr(no2Idx) = inArr(no2Idx) + (noxDiff*no2Ratio)  
+      else
+        outArr(i) = inArr(i)
+      end if
+    end do
     
     write(*,*) "RecalcNOx", outArr(2), outArr(3), outArr(2) + outArr(3)
     return
+    
   end subroutine recalculateNOx
 
   ! ----------------------------------------------------------------- !

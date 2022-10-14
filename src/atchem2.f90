@@ -109,13 +109,15 @@ PROGRAM ATCHEM2
   integer :: closure
   integer(c_int), parameter :: rtld_lazy=1 ! value extracted from the C header file
   integer(c_int), parameter :: rtld_now=2 ! value extracted from the C header file
+  
+  integer(kind=NPI) :: noIdx, no2Idx
 
   ! *****************************************************************
   ! Explicit declaration of FCVFUN() interface, which is a
   ! user-supplied function to CVODE.
   interface
 
-    subroutine FCVFUN( t, y, ydot, ipar, rpar, ier )
+    subroutine FCVFUN( t, y, ydot, ipar, rpar, ier, noConc, no2Conc )
       use types_mod
       use species_mod
       use constraints_mod
@@ -124,7 +126,7 @@ PROGRAM ATCHEM2
       use constraint_functions_mod
 
       ! Fortran routine for right-hand side function.
-      real(kind=DP), intent(in) :: t, y(*)
+      real(kind=DP), intent(in) :: t, y(*), noConc, no2Conc
       real(kind=DP), intent(out) :: ydot(*)
       integer(kind=NPI), intent(in) :: ipar(*)
       real(kind=DP), intent(in) :: rpar(*)
@@ -438,7 +440,10 @@ PROGRAM ATCHEM2
     end if
 
     ! Get concentrations for unconstrained species
-    call FCVODE( tout, t, z, itask, ier )
+    noIdx = getIndexOfSpecies("NO")
+    no2Idx = getIndexOfSpecies("NO2")
+    
+    call FCVODE( tout, t, z, itask, ier, z(noIdx), z(no2Idx) )
     if ( ier /= 0 ) then
       write (*, '(A, I0)') ' ier POST FCVODE()= ', ier
     end if
@@ -452,7 +457,7 @@ PROGRAM ATCHEM2
     ! Get concentrations for constrained species and add to array for
     ! output
     call addConstrainedSpeciesToProbSpec( z, getConstrainedConcs(), getConstrainedSpecies(), speciesConcs )
-    write(*,*) "LOOP", z(2), z(3), z(2) + z(3)
+
     ! Output rates of production and loss (output frequency set in
     ! model.parameters)
     if ( mod( elapsed, ratesOutputStepSize ) == 0 ) then
@@ -571,7 +576,7 @@ END PROGRAM ATCHEM2
 
 ! -------------------------------------------------------- !
 ! Fortran routine for right-hand side function.
-subroutine FCVFUN( t, y, ydot, ipar, rpar, ier )
+subroutine FCVFUN( t, y, ydot, ipar, rpar, ier, noConc, no2Conc )
   use types_mod
   use constraints_mod, only : getNumberOfConstrainedSpecies, numberOfVariableConstrainedSpecies, dataFixedY, &
                               getConstrainedSpecies, setConstrainedConcs
@@ -580,9 +585,10 @@ subroutine FCVFUN( t, y, ydot, ipar, rpar, ier )
   use interpolation_functions_mod, only : getVariableConstrainedSpeciesConcentrationAtT, getConstrainedPhotoRatesAtT
   use constraint_functions_mod, only : addConstrainedSpeciesToProbSpec, removeConstrainedSpeciesFromProbSpec
   use solver_functions_mod, only : resid
+  use env_vars_mod, only : currentEnvVarValues
   implicit none
 
-  real(kind=DP), intent(in) :: t, y(*)
+  real(kind=DP), intent(in) :: t, y(*), noConc, no2Conc
   real(kind=DP), intent(out) :: ydot(*)
   integer(kind=NPI), intent(in) :: ipar(*)
   real(kind=DP), intent(in) :: rpar(*)
@@ -590,6 +596,8 @@ subroutine FCVFUN( t, y, ydot, ipar, rpar, ier )
   integer(kind=NPI) :: numConSpec, np, numReac, i
   real(kind=DP) :: dummy
   real(kind=DP), allocatable :: dy(:), z(:), constrainedConcs(:)
+  
+  real(kind=DP) :: currentNoxConc, noxDiff, noRatio, no2Ratio
 
   numConSpec = getNumberOfConstrainedSpecies()
   np = ipar(1) + numConSpec
@@ -600,22 +608,32 @@ subroutine FCVFUN( t, y, ydot, ipar, rpar, ier )
   allocate (dy(np), z(np), constrainedConcs(numConSpec))
 
   ! for each constrained species...
+  currentNoxConc = (noConc + no2Conc)
+  noxDiff = currentEnvVarValues(12)-currentNoxConc 
+  noRatio = (noConc/currentNoxConc) 
+  no2Ratio = (no2Conc/currentNoxConc) 
+
   do i = 1, numConSpec
     ! if it's a variable-concentration constrained species,
     if ( i <= numberOfVariableConstrainedSpecies ) then
-      call getVariableConstrainedSpeciesConcentrationAtT( t, i, constrainedConcs(i) )
+      if (i == 1) then !NO must be set as the first constrained species (with any values in the constraint file)
+        constrainedConcs(i) = noConc + (noxDiff*noRatio)
+      else if (i == 2) then  !NO2 must be set as the first constrained species (with any values in the constraint file)
+        constrainedConcs(i) = no2Conc + (noxDiff*no2Ratio)
+      else
+        call getVariableConstrainedSpeciesConcentrationAtT( t, i, constrainedConcs(i) )
+      end if
     else
       constrainedConcs(i) = dataFixedY(i - numberOfVariableConstrainedSpecies)
     end if
   end do
-
+  
   call setConstrainedConcs( constrainedConcs )
-
+  
   call addConstrainedSpeciesToProbSpec( y, constrainedConcs, getConstrainedSpecies(), z )
-
+  
   call resid( numReac, t, z, dy, clhs, clcoeff, crhs, crcoeff )
   
-  write(*,*) "FCVFUN   ", dy(2), dy(3), dy(2) + dy(3)
   call removeConstrainedSpeciesFromProbSpec( dy, getConstrainedSpecies(), ydot )
 
   deallocate (dy, z)
