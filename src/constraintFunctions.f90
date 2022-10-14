@@ -121,27 +121,13 @@ contains
   ! Take in z, the vector of concentrations of unconstrained species,
   ! and add the concentrations of the constrained species. Return this
   ! in vector x.
-  subroutine addConstrainedSpeciesToProbSpec( z, constrainedConcentrations, constrainedSpecs, noxScale, x )
+  subroutine addConstrainedSpeciesToProbSpec( z, constrainedConcentrations, constrainedSpecs, x )
     use types_mod
-    use env_vars_mod, only : currentEnvVarValues
-    use species_mod, only : getIndexOfSpecies
 
     real(kind=DP), intent(in) :: z(*), constrainedConcentrations(:)
     integer(kind=NPI), intent(in) :: constrainedSpecs(:)
     real(kind=DP), intent(out) :: x(:)
-    logical, intent(in) :: noxScale
     integer(kind=NPI) :: zCounter, i, j, speciesConstrained
-    
-    real(kind=DP) :: currentNoxConc, noxDiff, noRatio, no2Ratio
-    integer(kind=NPI) :: noIdx, no2Idx
-    
-    noIdx = getIndexOfSpecies("NO")
-    no2Idx = getIndexOfSpecies("NO2")
-    
-    currentNoxConc = (z(noIdx) + z(no2Idx))
-    noxDiff = currentEnvVarValues(12)-currentNoxConc 
-    noRatio = (z(noIdx)/currentNoxConc) 
-    no2Ratio = (z(no2Idx)/currentNoxConc) 
     
     ! This fills x with the contents of z, plus the contents of
     ! constrainedConcentrations, using constrainedSpecs as the key to
@@ -161,13 +147,7 @@ contains
       if ( speciesConstrained > 0 ) then
         x(i) = constrainedConcentrations(speciesConstrained)
       else if ( speciesConstrained == 0 ) then
-        if ((i == noIdx) .and. (noxScale)) then
-          x(i) = z(i) + (noxDiff*noRatio)
-        else if ((i == no2Idx) .and. (noxScale))  then
-          x(i) = z(i) + (noxDiff*no2Ratio)    
-        else
-          x(i) = z(zCounter)
-        end if
+        x(i) = z(zCounter)
         zCounter = zCounter + 1
       else
         stop 'Error adding constrained values to measured values'
@@ -175,6 +155,34 @@ contains
     end do
     return
   end subroutine addConstrainedSpeciesToProbSpec
+
+  subroutine recalculateNOx( inArr, outArr)
+    use types_mod
+    use env_vars_mod, only : currentEnvVarValues
+    use species_mod, only : getIndexOfSpecies
+    
+    real(kind=DP) :: currentNoxConc, noxDiff, noRatio, no2Ratio
+    integer(kind=NPI) :: noIdx, no2Idx
+    
+    real(kind=DP), intent(in) :: inArr(:)
+    real(kind=DP), intent(out) :: outArr(size(inArr))
+    
+    outArr = inArr
+    
+    noIdx = getIndexOfSpecies("NO")
+    no2Idx = getIndexOfSpecies("NO2")
+    
+    currentNoxConc = (inArr(noIdx) + inArr(no2Idx))
+    noxDiff = currentEnvVarValues(12)-currentNoxConc 
+    noRatio = (inArr(noIdx)/currentNoxConc) 
+    no2Ratio = (inArr(no2Idx)/currentNoxConc) 
+
+    outArr(noIdx) = inArr(noIdx) + (noxDiff*noRatio)
+    outArr(no2Idx) = inArr(no2Idx) + (noxDiff*no2Ratio)  
+    
+    write(*,*) "RecalcNOx", outArr(2), outArr(3), outArr(2) + outArr(3)
+    return
+  end subroutine recalculateNOx
 
   ! ----------------------------------------------------------------- !
   ! Take in x, the vector of concentrations of all species, and remove

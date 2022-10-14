@@ -451,8 +451,8 @@ PROGRAM ATCHEM2
 
     ! Get concentrations for constrained species and add to array for
     ! output
-    call addConstrainedSpeciesToProbSpec( z, getConstrainedConcs(), getConstrainedSpecies(), .true., speciesConcs )
-
+    call addConstrainedSpeciesToProbSpec( z, getConstrainedConcs(), getConstrainedSpecies(), speciesConcs )
+    write(*,*) "LOOP", z(2), z(3), z(2) + z(3)
     ! Output rates of production and loss (output frequency set in
     ! model.parameters)
     if ( mod( elapsed, ratesOutputStepSize ) == 0 ) then
@@ -611,10 +611,11 @@ subroutine FCVFUN( t, y, ydot, ipar, rpar, ier )
 
   call setConstrainedConcs( constrainedConcs )
 
-  call addConstrainedSpeciesToProbSpec( y, constrainedConcs, getConstrainedSpecies(), .false., z )
+  call addConstrainedSpeciesToProbSpec( y, constrainedConcs, getConstrainedSpecies(), z )
 
   call resid( numReac, t, z, dy, clhs, clcoeff, crhs, crcoeff )
-
+  
+  write(*,*) "FCVFUN   ", dy(2), dy(3), dy(2) + dy(3)
   call removeConstrainedSpeciesFromProbSpec( dy, getConstrainedSpecies(), ydot )
 
   deallocate (dy, z)
