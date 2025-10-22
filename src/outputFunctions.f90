@@ -333,7 +333,7 @@ contains
     use reaction_rates_mod, only : reactionRates
     use storage_mod, only : maxFilepathLength
 
-    integer(kind=QI), intent(in) :: time
+    real(kind=DP), intent(in) :: time
     integer(kind=NPI) :: i
     character(len=maxFilepathLength+30) :: irfileLocation
     character(len=30) :: strTime

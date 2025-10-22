@@ -118,9 +118,9 @@ module model_params_mod
   save
 
   integer(kind=NPI) :: maxNumTimesteps
-  real(kind=DP) :: timestepSize
+  real(kind=DP) :: timestepSize, ratesOutputStepSize, jacobianOutputStepSize, irOutStepSize
   integer(kind=SI) :: speciesInterpolationMethod, conditionsInterpolationMethod
-  integer(kind=QI) :: ratesOutputStepSize, modelStartTime, jacobianOutputStepSize, irOutStepSize
+  integer(kind=QI) :: modelStartTime
   character(len=20) :: interpolationMethodName(2)
   logical :: outputJacobian
 
@@ -160,12 +160,12 @@ contains
     conditionsInterpolationMethod = nint( input_parameters(4), SI )
     call setConditionsInterpMethod( conditionsInterpolationMethod )
     ! Frequency at which outputRates is called.
-    ratesOutputStepSize = nint( input_parameters(5), QI )
+    ratesOutputStepSize = input_parameters(5)
     ! Start time of model. Used to set t initially, and to calculate
     ! the elapsed time.
     modelStartTime = nint( input_parameters(6) )
     ! Frequency at which jfy() is called below.
-    jacobianOutputStepSize = nint( input_parameters(7), QI )
+    jacobianOutputStepSize = input_parameters(7)
     if (jacobianOutputStepSize==0) then
       outputJacobian = .false.
     else
@@ -179,7 +179,7 @@ contains
     startMonth = nint( input_parameters(11), SI )
     startYear = nint( input_parameters(12), DI )
     ! Frequency at which to output reaction rates
-    irOutStepSize = nint( input_parameters(13), QI )
+    irOutStepSize = input_parameters(13)
 
     ! float format
     300 format (A52, E11.3)
@@ -194,12 +194,12 @@ contains
     write (*, 300) 'step size: ', timestepSize
     write (*, 500) 'species interpolation method: ', adjustl( interpolationMethodName(speciesInterpolationMethod) )
     write (*, 500) 'conditions interpolation method: ', adjustl( interpolationMethodName(conditionsInterpolationMethod) )
-    write (*, 400) 'rates output step size, ROPA/RODA: ', ratesOutputStepSize
+    write (*, 300) 'rates output step size, ROPA/RODA: ', ratesOutputStepSize
     write (*, 400) 'model start time: ', modelStartTime
-    write (*, 400) 'jacobian output step size: ', jacobianOutputStepSize
+    write (*, 300) 'jacobian output step size: ', jacobianOutputStepSize
     write (*, 300) 'latitude: ', latitude
     write (*, 300) 'longitude: ', longitude
-    write (*, 400) 'reaction rates output step size: ', irOutStepSize
+    write (*, 300) 'reaction rates output step size: ', irOutStepSize
     write (*, '(A52, I3, A, I2, A, I4) ') 'day/month/year: ', startDay, '/', startMonth, '/', startYear
     write (*, '(A)') ' -----------------'
     write (*,*)

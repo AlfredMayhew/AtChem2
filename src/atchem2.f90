@@ -96,7 +96,7 @@ PROGRAM ATCHEM2
   ! Declarations for concentration outputs
   character(len=maxSpecLength), allocatable :: speciesOfInterest(:)
   ! simulation output time variables
-  integer(kind=QI) :: time, elapsed
+  real(kind=DP) :: time, elapsed
   ! species concentrations with and without constrained species
   real(kind=DP), allocatable :: speciesConcs(:)
   real(kind=DP), allocatable :: z(:)
@@ -423,7 +423,7 @@ PROGRAM ATCHEM2
   write (*, '(A)') ' Model run'
   write (*, '(A)') '-----------'
 
-  elapsed = int( t - modelStartTime )
+  elapsed = t - modelStartTime
 
   do while ( currentNumTimestep < maxNumTimesteps )
 
@@ -446,10 +446,10 @@ PROGRAM ATCHEM2
     end if
     flush(6)
 
-    time = nint( t )
+    time = t
     elapsed = time - modelStartTime
 
-    write (*, '(A, I0)') ' time = ', time
+    write (*, '(A52, F11.2)') ' time = ', time
 
     ! Get concentrations for constrained species and add to array for
     ! output
